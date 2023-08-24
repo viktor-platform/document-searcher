@@ -10,7 +10,7 @@ from viktor import UserMessage
 from viktor import ViktorController
 from viktor import progress_message
 from viktor.core import Storage, File
-from viktor.parametrization import DownloadButton, MultiFileField, BooleanField
+from viktor.parametrization import MultiFileField, BooleanField
 from viktor.parametrization import SetParamsButton
 from viktor.parametrization import Text
 from viktor.parametrization import TextAreaField
