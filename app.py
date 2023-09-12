@@ -26,7 +26,7 @@ from retrieval_assistant import RetrievalAssistant, get_API_key
 class Parametrization(ViktorParametrization):
     welcome_text = Text(
         "# \U0001F50D Document searcher  \n"
-        "Welcome to the VIKTOR document searcher, powered by ChatGPT. "
+        "Welcome to the VIKTOR document searcher, powered by AzureAI. "
         "Upload your document(s) and click on 'Submit document(s)'. Then, ask any question "
         "to your document(s). Your question will be answered by using semantic search."
     )
