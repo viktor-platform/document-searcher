@@ -10,7 +10,7 @@ from context import create_context, get_question_with_context, get_chat_completi
 
 def get_API_key():
     try:
-        API_KEY, _, _, _ = os.environ["VIKTOR_APP_SECRET"].split("|")
+        API_KEY = os.environ["API_KEY"]
     except KeyError:
         from API_KEY import API_KEY  # pylint: disable=import-outside-toplevel
     return API_KEY
