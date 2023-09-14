@@ -79,13 +79,12 @@ def get_chat_completion_gpt(questions_and_answers):
     for idx in range(RETRIES):
         try:
             completion = openai.ChatCompletion.create(
-                model=COMPLETIONS_MODEL, messages=questions_and_answers, temperature=TEMPERATURE
+                engine=COMPLETIONS_MODEL, messages=questions_and_answers, temperature=TEMPERATURE
             )
             break
-        except InvalidRequestError:
+        except InvalidRequestError as e:
             raise UserError(
-                "InvalidRequestError: The number of maximum tokens [4097] is exceeded. Please start a new "
-                "conversation and try to get to the desired answer in less requests."
+                f"InvalidRequestError: {e}"
             )
         except RateLimitError:
             if idx < RETRIES - 1:

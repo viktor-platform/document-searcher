@@ -19,6 +19,7 @@ from viktor.result import SetParamsResult
 from viktor.views import WebResult
 from viktor.views import WebView
 
+from config import EMBEDDINGS_MODEL
 from helper_functions import generate_html_code, df_to_VIKTOR_csv_file, VIKTOR_file_to_df, list_to_html_string
 from retrieval_assistant import RetrievalAssistant, get_API_key
 
@@ -26,19 +27,19 @@ from retrieval_assistant import RetrievalAssistant, get_API_key
 class Parametrization(ViktorParametrization):
     welcome_text = Text(
         "# \U0001F50D Document searcher  \n"
-        "Welcome to the VIKTOR document searcher, powered by AzureAI. "
-        "Upload your document(s) and click on 'Submit document(s)'. Then, ask any question "
-        "to your document(s). Your question will be answered by using semantic search."
+        "Welcome to the VIKTOR document searcher. "
+        "With this app, you can easily find information in your PDF documents. Your question will be answered using "
+        "the power of AzureAI."
     )
-    pdf_uploaded = MultiFileField("Upload PDF(s)", file_types=[".pdf"], flex=50)
-    set_embeddings_button = SetParamsButton("\u2705 Submit document(s)", "set_embeddings", flex=50, longpoll=True)
+    pdf_uploaded = MultiFileField("**Step 1:** Upload documents [PDF]", flex=100, file_types=[".pdf"])
+    set_embeddings_button = SetParamsButton("**Step 2:** Submit documents \u2705", "set_embeddings", flex=45, longpoll=True)
     question = TextAreaField(
-        "Search",
+        "**Step 3:** Ask your question here",
         flex=100,
-        description="Enter your question here. Press the update button on "
-        "the bottom right to retrieve the answer to your "
-        "question.",
     )
+    step_4_text = Text("**Step 4:** Get your result by clicking 'Update' in the lower-right corner of this app.")
+    disclaimer_text = Text("**Privacy:** All your data will remain strictly confidential, and it will "
+                           "not be used to train any model.")
     embeddings_are_set = BooleanField("embeddings_are_set", default=False, visible=False)
 
 
@@ -77,8 +78,14 @@ class Controller(ViktorController):
                     page.flush_cache()
 
         # Embed chunks
-        API_KEY = get_API_key()
-        embeddings = OpenAIEmbeddings(openai_api_key=API_KEY)
+        API_KEY, ENDPOINT = get_API_key()
+        embeddings = OpenAIEmbeddings(
+                openai_api_key=API_KEY,
+                deployment=EMBEDDINGS_MODEL,
+                model=EMBEDDINGS_MODEL,
+                openai_api_base=ENDPOINT,
+                openai_api_type="azure",
+            )
         embedded_documents = []
         for document in documents:
             UserMessage.info(f"Embedding page {document.metadata['page_number']}/{n_pages} for "

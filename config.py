@@ -1,4 +1,4 @@
-COMPLETIONS_MODEL = "gpt-3.5-turbo"
+COMPLETIONS_MODEL = "gpt-35-turbo"
 EMBEDDINGS_MODEL = "text-embedding-ada-002"
 TEMPERATURE = 0
 RETRIES = 3
