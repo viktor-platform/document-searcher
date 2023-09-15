@@ -32,7 +32,8 @@ class Parametrization(ViktorParametrization):
         "the power of AzureAI."
     )
     pdf_uploaded = MultiFileField("**Step 1:** Upload documents [PDF]", flex=100, file_types=[".pdf"])
-    set_embeddings_button = SetParamsButton("**Step 2:** Submit documents \u2705", "set_embeddings", flex=45, longpoll=True)
+    text_step_2 = Text("**Step 2**: Submit your documents by clicking on the button below")
+    set_embeddings_button = SetParamsButton("\u2705 Submit documents", "set_embeddings", flex=45, longpoll=True)
     question = TextAreaField(
         "**Step 3:** Ask your question here",
         flex=100,
