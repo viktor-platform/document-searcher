@@ -60,25 +60,31 @@ class Controller(ViktorController):
 
         # Read and chunk PDF
         documents = []
-        pdf_names = []
+        pdf_information = {}
         for pdf_file in params.pdf_uploaded:
             with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
-                n_pages = len(pdf.pages)
-                pdf_names.append(pdf_file.filename)
-                for page_number, page in enumerate(pdf.pages, start=1):
+                pdf_information[pdf_file.filename] = {"n_pages": len(pdf.pages), "pdf_file": pdf_file}
+
+        for pdf_filename in pdf_information:
+            pages_range = pdf_information[pdf_filename]["n_pages"]
+            for page_number in range(pages_range):
+                pdf_file = pdf_information[pdf_filename]["pdf_file"]
+                with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
+                    page = pdf.pages[page_number]
                     progress_message(f"Setting up vector dataframe for...")
-                    UserMessage.info(f"Reading page {page_number}/{n_pages} from {pdf_file.filename}")
+                    UserMessage.info(f"Reading page {page_number+1}/{pages_range} from {pdf_file.filename}")
+                    page.extract_text()
                     page_text_split = splitter.split_text(page.extract_text(stream=True))
                     for split_text in page_text_split:
-                        documents.append(
-                            Document(
+                        documents.append(Document(
                                 page_content=split_text,
-                                metadata={"source": pdf_file.filename, "page_number": page_number},
+                                metadata={"source": pdf_file.filename, "page_number": page_number+1,
+                                          "n_pages": pdf_information[pdf_filename]["n_pages"]},
                             )
                         )
                     page.flush_cache()
 
-        # Embed chunks
+                    # Embed chunks
         API_KEY, ENDPOINT = get_API_key()
         embeddings = OpenAIEmbeddings(
                 openai_api_key=API_KEY,
@@ -89,7 +95,7 @@ class Controller(ViktorController):
             )
         embedded_documents = []
         for document in documents:
-            UserMessage.info(f"Embedding page {document.metadata['page_number']}/{n_pages} for "
+            UserMessage.info(f"Embedding page {document.metadata['page_number']}/{document.metadata['n_pages']} for "
                              f"{document.metadata['source']}")
             embedded_documents.append(
                 {
@@ -105,7 +111,7 @@ class Controller(ViktorController):
         df = pd.DataFrame(embedded_documents)
         csv_file = df_to_VIKTOR_csv_file(df)
         UserMessage.success("Document succesfully embedded!")
-        pdf_names_str = list_to_html_string(pdf_names)
+        pdf_names_str = list_to_html_string(pdf_information.keys())
         Storage().set("embeddings_storage", csv_file, scope='entity')
         Storage().set("list_of_files", File.from_data(pdf_names_str), scope='entity')
         return SetParamsResult({"embeddings_are_set": True})
