@@ -73,8 +73,7 @@ class Controller(ViktorController):
                     page = pdf.pages[page_number]
                     progress_message(f"Setting up vector dataframe for...")
                     UserMessage.info(f"Reading page {page_number+1}/{pages_range} from {pdf_file.filename}")
-                    page.extract_text()
-                    page_text_split = splitter.split_text(page.extract_text(stream=True))
+                    page_text_split = splitter.split_text(page.extract_text())
                     for split_text in page_text_split:
                         documents.append(Document(
                                 page_content=split_text,
