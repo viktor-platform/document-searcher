@@ -4,8 +4,13 @@ import openai
 from viktor.core import progress_message
 
 from config import SYSTEM_MESSAGE, N_CONTEXT
-from context import create_context, get_question_with_context, get_chat_completion_gpt, get_response_message, \
-    get_question_for_language
+from context import (
+    create_context,
+    get_question_with_context,
+    get_chat_completion_gpt,
+    get_response_message,
+    get_question_for_language,
+)
 
 
 def get_API_key():
@@ -32,8 +37,8 @@ class RetrievalAssistant:
 
         openai.api_key = API_KEY
         openai.api_base = ENDPOINT
-        openai.api_type = 'azure'
-        openai.api_version = '2023-05-15'
+        openai.api_type = "azure"
+        openai.api_version = "2023-05-15"
 
         self._set_current_question(self.question)
         self._create_context()

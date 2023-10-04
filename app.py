@@ -9,10 +9,17 @@ from viktor import UserError
 from viktor import UserMessage
 from viktor import ViktorController
 from viktor import progress_message
-from viktor.core import Storage, File
-from viktor.parametrization import MultiFileField, BooleanField, OutputField, IsTrue, Lookup, Table, \
-    OptionField, NumberField
+from viktor.core import File
+from viktor.core import Storage
+from viktor.parametrization import BooleanField
+from viktor.parametrization import IsTrue
+from viktor.parametrization import Lookup
+from viktor.parametrization import MultiFileField
+from viktor.parametrization import NumberField
+from viktor.parametrization import OptionField
+from viktor.parametrization import OutputField
 from viktor.parametrization import SetParamsButton
+from viktor.parametrization import Table
 from viktor.parametrization import Text
 from viktor.parametrization import TextAreaField
 from viktor.parametrization import ViktorParametrization
@@ -21,13 +28,20 @@ from viktor.views import WebResult
 from viktor.views import WebView
 
 from config import EMBEDDINGS_MODEL
-from helper_functions import generate_html_code, df_to_VIKTOR_csv_file, VIKTOR_file_to_df, list_to_html_string
-from memory_error_functions import get_memory_error, _get_document_names, check_if_page_is_excluded, \
-    NO_MEMORY_ERROR_MESSAGE
-from retrieval_assistant import RetrievalAssistant, get_API_key
+from helper_functions import VIKTOR_file_to_df
+from helper_functions import df_to_VIKTOR_csv_file
+from helper_functions import generate_html_code
+from helper_functions import list_to_html_string
+from memory_error_functions import NO_MEMORY_ERROR_MESSAGE
+from memory_error_functions import _get_document_names
+from memory_error_functions import check_if_page_is_excluded
+from memory_error_functions import get_memory_error
+from retrieval_assistant import RetrievalAssistant
+from retrieval_assistant import get_API_key
 
 
 class Parametrization(ViktorParametrization):
+    """Parametrization class for document searcher"""
     welcome_text = Text(
         "# \U0001F50D Document searcher  \n"
         "Welcome to the VIKTOR document searcher. "
@@ -42,23 +56,28 @@ class Parametrization(ViktorParametrization):
         flex=100,
     )
     step_4_text = Text("**Step 4:** Get your result by clicking 'Update' in the lower-right corner of this app.")
-    disclaimer_text = Text("**Privacy:** All your data will remain strictly confidential, and it will "
-                           "not be used to train any model.")
+    disclaimer_text = Text(
+        "**Privacy:** All your data will remain strictly confidential, and it will " "not be used to train any model."
+    )
     embeddings_are_set = BooleanField("embeddings_are_set", default=False, visible=False)
     out_of_memory_toggle = BooleanField("**Troubleshoot:** Out of memory? Click here to continue", flex=100)
-    out_of_memory_text = Text("A known issue within the app is that some PDF pages can cause the app to run out of "
-                              "memory. This happens for example when technical drawings are included in the PDF. If "
-                              "a memory error occured, below is shown at what page and in which document. Please exclude this "
-                              "page by entering the document name and page number in the table below.",
-                              visible=IsTrue(Lookup("out_of_memory_toggle")))
-    memory_error_output = OutputField("Memory error at:", value=get_memory_error,
-                                      visible=IsTrue(Lookup("out_of_memory_toggle")), flex=100)
+    out_of_memory_text = Text(
+        "A known issue within the app is that some PDF pages can cause the app to run out of "
+        "memory. This happens for example when technical drawings are included in the PDF. If "
+        "a memory error occured, below is shown at what page and in which document. Please exclude this "
+        "page by entering the document name and page number in the table below.",
+        visible=IsTrue(Lookup("out_of_memory_toggle")),
+    )
+    memory_error_output = OutputField(
+        "Memory error at:", value=get_memory_error, visible=IsTrue(Lookup("out_of_memory_toggle")), flex=100
+    )
     exclude_pages_table = Table("Exclude pages from document", visible=IsTrue(Lookup("out_of_memory_toggle")))
     exclude_pages_table.document_name = OptionField("Document name", options=_get_document_names)
     exclude_pages_table.page_number = NumberField("Page number")
 
 
 class Controller(ViktorController):
+    """Controller class for Document searcher app"""
     label = "Documents"
     parametrization = Parametrization
 
@@ -84,23 +103,28 @@ class Controller(ViktorController):
             for page_number in range(pages_range):
                 pdf_file = pdf_information[pdf_filename]["pdf_file"]
                 with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
-                    if check_if_page_is_excluded(page_number, pdf_file.filename,
-                                                 params.exclude_pages_table,
-                                                 params.out_of_memory_toggle):
+                    if check_if_page_is_excluded(
+                        page_number, pdf_file.filename, params.exclude_pages_table, params.out_of_memory_toggle
+                    ):
                         continue
                     page = pdf.pages[page_number]
                     progress_message(f"Setting up vector dataframe for...")
                     UserMessage.info(f"Reading page {page_number + 1}/{pages_range} from {pdf_file.filename}")
                     current_file_and_page = File.from_data(
-                        f"Page number: {page_number + 1} - Filename: {pdf_file.filename}")
+                        f"Page number: {page_number + 1} - Filename: {pdf_file.filename}"
+                    )
                     Storage().set("current_document_and_page", current_file_and_page, scope="entity")
                     page_text_split = splitter.split_text(page.extract_text())
                     for split_text in page_text_split:
-                        documents.append(Document(
-                            page_content=split_text,
-                            metadata={"source": pdf_file.filename, "page_number": page_number + 1,
-                                      "n_pages": pdf_information[pdf_filename]["n_pages"]},
-                        )
+                        documents.append(
+                            Document(
+                                page_content=split_text,
+                                metadata={
+                                    "source": pdf_file.filename,
+                                    "page_number": page_number + 1,
+                                    "n_pages": pdf_information[pdf_filename]["n_pages"],
+                                },
+                            )
                         )
                     page.flush_cache()
                     Storage().set("current_document_and_page", File.from_data(NO_MEMORY_ERROR_MESSAGE), scope="entity")
@@ -116,8 +140,10 @@ class Controller(ViktorController):
         )
         embedded_documents = []
         for document in documents:
-            UserMessage.info(f"Embedding page {document.metadata['page_number']}/{document.metadata['n_pages']} for "
-                             f"{document.metadata['source']}")
+            UserMessage.info(
+                f"Embedding page {document.metadata['page_number']}/{document.metadata['n_pages']} for "
+                f"{document.metadata['source']}"
+            )
             embedded_documents.append(
                 {
                     "text": document.page_content,
@@ -133,8 +159,8 @@ class Controller(ViktorController):
         csv_file = df_to_VIKTOR_csv_file(df)
         UserMessage.success("Document succesfully embedded!")
         pdf_names_str = list_to_html_string(pdf_information.keys())
-        Storage().set("embeddings_storage", csv_file, scope='entity')
-        Storage().set("list_of_files", File.from_data(pdf_names_str), scope='entity')
+        Storage().set("embeddings_storage", csv_file, scope="entity")
+        Storage().set("list_of_files", File.from_data(pdf_names_str), scope="entity")
         return SetParamsResult({"embeddings_are_set": True})
 
     @WebView("Conversation", duration_guess=5)
@@ -160,5 +186,5 @@ class Controller(ViktorController):
         if not params.embeddings_are_set:
             pdf_names_str = "No documents have been uploaded or submitted yet."
         else:
-            pdf_names_str = Storage().get("list_of_files", scope='entity').getvalue()
+            pdf_names_str = Storage().get("list_of_files", scope="entity").getvalue()
         return WebResult(html=pdf_names_str)

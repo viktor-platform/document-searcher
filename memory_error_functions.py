@@ -8,7 +8,7 @@ NO_MEMORY_ERROR_MESSAGE = "No out of memory detected"
 def get_memory_error(**kwargs):
     """Check if memory occured, and if so return the document name and page number on which the error occured"""
     try:
-        storage = Storage().get("current_document_and_page", scope='entity')
+        storage = Storage().get("current_document_and_page", scope="entity")
         document_name_and_page = storage.getvalue()
     except FileNotFoundError:
         document_name_and_page = NO_MEMORY_ERROR_MESSAGE
@@ -23,7 +23,9 @@ def _get_document_names(params: Munch, **kwargs):
     return pdf_file_names
 
 
-def check_if_page_is_excluded(page_number: int, filename: str, exclude_pages_table: Table, out_of_memory_toggle: bool) -> bool:
+def check_if_page_is_excluded(
+    page_number: int, filename: str, exclude_pages_table: Table, out_of_memory_toggle: bool
+) -> bool:
     """Checks if page in document is excluded from reading the PDF."""
     if out_of_memory_toggle:
         for row in exclude_pages_table:

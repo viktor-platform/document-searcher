@@ -106,7 +106,8 @@ def generate_html_code(question: str, answer: str, metadata, context_history):
         statement = f"Page {metadata_source['page_number']} - Document {metadata_source['source']}"
         content = markdown.markdown(context)
         html += '<details class="message"> <summary>{}</summary> <div class="content">{}</div> </details>\n'.format(
-            statement, content)
+            statement, content
+        )
     html += "</blockquote>"
 
     html += """

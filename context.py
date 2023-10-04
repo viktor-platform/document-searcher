@@ -29,9 +29,14 @@ def distances_from_embeddings(
 
 def get_question_for_language(current_question):
     """Retrieves the language from the question and returns it as an instruction."""
-    return [{"role": "user", "content": f"What language is the following text? Answer in a single word "
-                                        f"{current_question}. Provide your answer as an instruction, "
-                                        f"such as: 'Answer in Dutch', 'Answer in English'"}]
+    return [
+        {
+            "role": "user",
+            "content": f"What language is the following text? Answer in a single word "
+            f"{current_question}. Provide your answer as an instruction, "
+            f"such as: 'Answer in Dutch', 'Answer in English'",
+        }
+    ]
 
 
 def get_question_with_context(current_question, context):
@@ -83,9 +88,7 @@ def get_chat_completion_gpt(questions_and_answers):
             )
             break
         except InvalidRequestError as e:
-            raise UserError(
-                f"InvalidRequestError: {e}"
-            )
+            raise UserError(f"InvalidRequestError: {e}")
         except RateLimitError:
             if idx < RETRIES - 1:
                 progress_message(random.choice(RETRY_MESSAGE))
