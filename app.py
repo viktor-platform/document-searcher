@@ -10,7 +10,8 @@ from viktor import UserMessage
 from viktor import ViktorController
 from viktor import progress_message
 from viktor.core import Storage, File
-from viktor.parametrization import MultiFileField, BooleanField
+from viktor.parametrization import MultiFileField, BooleanField, OutputField, IsTrue, Lookup, Table, \
+    OptionField, NumberField
 from viktor.parametrization import SetParamsButton
 from viktor.parametrization import Text
 from viktor.parametrization import TextAreaField
@@ -21,6 +22,8 @@ from viktor.views import WebView
 
 from config import EMBEDDINGS_MODEL
 from helper_functions import generate_html_code, df_to_VIKTOR_csv_file, VIKTOR_file_to_df, list_to_html_string
+from memory_error_functions import get_memory_error, _get_document_names, check_if_page_is_excluded, \
+    NO_MEMORY_ERROR_MESSAGE
 from retrieval_assistant import RetrievalAssistant, get_API_key
 
 
@@ -42,6 +45,17 @@ class Parametrization(ViktorParametrization):
     disclaimer_text = Text("**Privacy:** All your data will remain strictly confidential, and it will "
                            "not be used to train any model.")
     embeddings_are_set = BooleanField("embeddings_are_set", default=False, visible=False)
+    out_of_memory_toggle = BooleanField("**Troubleshoot:** Out of memory? Click here to continue", flex=100)
+    out_of_memory_text = Text("A known issue within the app is that some PDF pages can cause the app to run out of "
+                              "memory. This happens for example when technical drawings are included in the PDF. If "
+                              "a memory error occured, below is shown at what page and in which document. Please exclude this "
+                              "page by entering the document name and page number in the table below.",
+                              visible=IsTrue(Lookup("out_of_memory_toggle")))
+    memory_error_output = OutputField("Memory error at:", value=get_memory_error,
+                                      visible=IsTrue(Lookup("out_of_memory_toggle")), flex=100)
+    exclude_pages_table = Table("Exclude pages from document", visible=IsTrue(Lookup("out_of_memory_toggle")))
+    exclude_pages_table.document_name = OptionField("Document name", options=_get_document_names)
+    exclude_pages_table.page_number = NumberField("Page number")
 
 
 class Controller(ViktorController):
@@ -70,28 +84,36 @@ class Controller(ViktorController):
             for page_number in range(pages_range):
                 pdf_file = pdf_information[pdf_filename]["pdf_file"]
                 with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
+                    if check_if_page_is_excluded(page_number, pdf_file.filename,
+                                                 params.exclude_pages_table,
+                                                 params.out_of_memory_toggle):
+                        continue
                     page = pdf.pages[page_number]
                     progress_message(f"Setting up vector dataframe for...")
-                    UserMessage.info(f"Reading page {page_number+1}/{pages_range} from {pdf_file.filename}")
+                    UserMessage.info(f"Reading page {page_number + 1}/{pages_range} from {pdf_file.filename}")
+                    current_file_and_page = File.from_data(
+                        f"Page number: {page_number + 1} - Filename: {pdf_file.filename}")
+                    Storage().set("current_document_and_page", current_file_and_page, scope="entity")
                     page_text_split = splitter.split_text(page.extract_text())
                     for split_text in page_text_split:
                         documents.append(Document(
-                                page_content=split_text,
-                                metadata={"source": pdf_file.filename, "page_number": page_number+1,
-                                          "n_pages": pdf_information[pdf_filename]["n_pages"]},
-                            )
+                            page_content=split_text,
+                            metadata={"source": pdf_file.filename, "page_number": page_number + 1,
+                                      "n_pages": pdf_information[pdf_filename]["n_pages"]},
+                        )
                         )
                     page.flush_cache()
+                    Storage().set("current_document_and_page", File.from_data(NO_MEMORY_ERROR_MESSAGE), scope="entity")
 
                     # Embed chunks
         API_KEY, ENDPOINT = get_API_key()
         embeddings = OpenAIEmbeddings(
-                openai_api_key=API_KEY,
-                deployment=EMBEDDINGS_MODEL,
-                model=EMBEDDINGS_MODEL,
-                openai_api_base=ENDPOINT,
-                openai_api_type="azure",
-            )
+            openai_api_key=API_KEY,
+            deployment=EMBEDDINGS_MODEL,
+            model=EMBEDDINGS_MODEL,
+            openai_api_base=ENDPOINT,
+            openai_api_type="azure",
+        )
         embedded_documents = []
         for document in documents:
             UserMessage.info(f"Embedding page {document.metadata['page_number']}/{document.metadata['n_pages']} for "
