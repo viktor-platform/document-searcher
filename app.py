@@ -42,6 +42,7 @@ from retrieval_assistant import get_API_key
 
 class Parametrization(ViktorParametrization):
     """Parametrization class for document searcher"""
+
     welcome_text = Text(
         "# \U0001F50D Document searcher  \n"
         "Welcome to the VIKTOR document searcher. "
@@ -78,6 +79,7 @@ class Parametrization(ViktorParametrization):
 
 class Controller(ViktorController):
     """Controller class for Document searcher app"""
+
     label = "Documents"
     parametrization = Parametrization
 
