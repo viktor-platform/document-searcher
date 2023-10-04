@@ -4,11 +4,19 @@ from typing import List
 import numpy as np
 import openai
 from openai import InvalidRequestError
-from openai.error import RateLimitError, APIError, AuthenticationError, ServiceUnavailableError
+from openai.error import APIError
+from openai.error import AuthenticationError
+from openai.error import RateLimitError
+from openai.error import ServiceUnavailableError
 from scipy import spatial
-from viktor import progress_message, UserError
+from viktor import UserError
+from viktor import progress_message
 
-from config import EMBEDDINGS_MODEL, RETRIES, COMPLETIONS_MODEL, TEMPERATURE, RETRY_MESSAGE
+from config import COMPLETIONS_MODEL
+from config import EMBEDDINGS_MODEL
+from config import RETRIES
+from config import RETRY_MESSAGE
+from config import TEMPERATURE
 
 
 def distances_from_embeddings(
@@ -77,10 +85,12 @@ def create_context(current_question, df, context_number):
 
 
 def get_response_message(completion):
+    """Gets response message from API call to AzureAI"""
     return completion["choices"][0]["message"]["content"]
 
 
 def get_chat_completion_gpt(questions_and_answers):
+    """Posts thre request to AzureAI and catch exceptions"""
     for idx in range(RETRIES):
         try:
             completion = openai.ChatCompletion.create(
