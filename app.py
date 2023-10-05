@@ -1,5 +1,3 @@
-import io
-
 import pandas as pd
 import pdfplumber
 from langchain.embeddings import OpenAIEmbeddings
@@ -66,7 +64,10 @@ class Parametrization(ViktorParametrization):
         "A known issue within the app is that some PDF pages can cause the app to run out of "
         "memory. This happens for example when technical drawings are included in the PDF. If "
         "a memory error occured, below is shown at what page and in which document. Please exclude this "
-        "page by entering the document name and page number in the table below.",
+        "page by entering the document name and page number in the table below.  \n"
+        "If this doesn't work, try uploading less PDF files. An issue is known that the app doesn't work when too many "
+        "files are uploaded. The app has been tested to work for around 10-15 pdf files, containing around "
+        "800-1000 pages.",
         visible=IsTrue(Lookup("out_of_memory_toggle")),
     )
     memory_error_output = OutputField(
@@ -97,39 +98,42 @@ class Controller(ViktorController):
         documents = []
         pdf_information = {}
         for pdf_file in params.pdf_uploaded:
-            with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
-                pdf_information[pdf_file.filename] = {"n_pages": len(pdf.pages), "pdf_file": pdf_file}
+            with pdf_file.file.open_binary() as pdf_opened:
+                with pdfplumber.open(pdf_opened) as pdf:
+                    UserMessage.info(f"Pre-processing {pdf_file.filename}")
+                    pdf_information[pdf_file.filename] = {"n_pages": len(pdf.pages), "pdf_file": pdf_file}
 
         for pdf_filename in pdf_information:
             pages_range = pdf_information[pdf_filename]["n_pages"]
             for page_number in range(pages_range):
                 pdf_file = pdf_information[pdf_filename]["pdf_file"]
-                with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
-                    if check_if_page_is_excluded(
-                        page_number, pdf_file.filename, params.exclude_pages_table, params.out_of_memory_toggle
-                    ):
-                        continue
-                    page = pdf.pages[page_number]
-                    progress_message(f"Setting up vector dataframe for...")
-                    UserMessage.info(f"Reading page {page_number + 1}/{pages_range} from {pdf_file.filename}")
-                    current_file_and_page = File.from_data(
-                        f"Page number: {page_number + 1} - Filename: {pdf_file.filename}"
-                    )
-                    Storage().set("current_document_and_page", current_file_and_page, scope="entity")
-                    page_text_split = splitter.split_text(page.extract_text())
-                    for split_text in page_text_split:
-                        documents.append(
-                            Document(
-                                page_content=split_text,
-                                metadata={
-                                    "source": pdf_file.filename,
-                                    "page_number": page_number + 1,
-                                    "n_pages": pdf_information[pdf_filename]["n_pages"],
-                                },
-                            )
+                with pdf_file.file.open_binary() as pdf_opened:
+                    with pdfplumber.open(pdf_opened) as pdf:
+                        if check_if_page_is_excluded(
+                            page_number, pdf_file.filename, params.exclude_pages_table, params.out_of_memory_toggle
+                        ):
+                            continue
+                        page = pdf.pages[page_number]
+                        progress_message(f"Setting up vector dataframe for...")
+                        UserMessage.info(f"Reading page {page_number + 1}/{pages_range} from {pdf_file.filename}")
+                        current_file_and_page = File.from_data(
+                            f"Page number: {page_number + 1} - Filename: {pdf_file.filename}"
                         )
-                    page.flush_cache()
-                    Storage().set("current_document_and_page", File.from_data(NO_MEMORY_ERROR_MESSAGE), scope="entity")
+                        Storage().set("current_document_and_page", current_file_and_page, scope="entity")
+                        page_text_split = splitter.split_text(page.extract_text())
+                        for split_text in page_text_split:
+                            documents.append(
+                                Document(
+                                    page_content=split_text,
+                                    metadata={
+                                        "source": pdf_file.filename,
+                                        "page_number": page_number + 1,
+                                        "n_pages": pdf_information[pdf_filename]["n_pages"],
+                                    },
+                                )
+                            )
+                        Storage().set("current_document_and_page", File.from_data(NO_MEMORY_ERROR_MESSAGE), scope="entity")
+                        page.flush_cache()
 
                     # Embed chunks
         API_KEY, ENDPOINT = get_API_key()
