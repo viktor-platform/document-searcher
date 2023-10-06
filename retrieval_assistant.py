@@ -3,17 +3,17 @@ import os
 import openai
 from viktor.core import progress_message
 
-from config import SYSTEM_MESSAGE, N_CONTEXT
-from context import (
-    create_context,
-    get_question_with_context,
-    get_chat_completion_gpt,
-    get_response_message,
-    get_question_for_language,
-)
+from config import N_CONTEXT
+from config import SYSTEM_MESSAGE
+from context import create_context
+from context import get_chat_completion_gpt
+from context import get_question_for_language
+from context import get_question_with_context
+from context import get_response_message
 
 
-def get_API_key():
+def get_API_key() -> tuple[str, str]:
+    """Get API key and endpoint from app secret"""
     try:
         API_KEY = os.environ["API_KEY"]
         ENDPOINT = os.environ["ENDPOINT"]
@@ -44,12 +44,15 @@ class RetrievalAssistant:
         self._create_context()
 
     def _create_context(self):
+        """Set the context for the question"""
         self.context, self.metadata_list, self.context_list = create_context(self.question, self.df, N_CONTEXT)
 
-    def _set_current_question(self, question):
+    def _set_current_question(self, question: str):
+        """Converts current question to correct format"""
         self.current_question = {"role": "user", "content": question}
 
     def ask_assistant(self):
+        """Method for preparing the question and then asking it to AzureAI"""
         progress_message("Setting up question...")
         completion_question = get_chat_completion_gpt(get_question_for_language(self.current_question))
         language_question = get_response_message(completion_question)

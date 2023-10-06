@@ -18,7 +18,8 @@ def VIKTOR_file_to_df(file_name: File) -> pd.DataFrame:
     return pd.read_csv(io.StringIO(file_content))
 
 
-def list_to_html_string(input_list):
+def list_to_html_string(input_list: list[str]):
+    """Convert sources to nice-looking html"""
     html_string = "<html>\n"
     html_string += "<body>\n"
     html_string += "<strong>The following documents are currently included in the search:</strong>\n"
@@ -31,7 +32,8 @@ def list_to_html_string(input_list):
     return html_string
 
 
-def generate_html_code(question: str, answer: str, metadata, context_history):
+def generate_html_code(question: str, answer: str, metadata: list[dict], context_history: list[str]):
+    """Present the results in a nice-looking html"""
     html = """
     <!DOCTYPE html>
     <html>

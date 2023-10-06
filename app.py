@@ -1,28 +1,15 @@
-import io
-
 import pandas as pd
 import pdfplumber
-from config import EMBEDDINGS_MODEL
-from helper_functions import VIKTOR_file_to_df
-from helper_functions import df_to_VIKTOR_csv_file
-from helper_functions import generate_html_code
-from helper_functions import list_to_html_string
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from memory_error_functions import NO_MEMORY_ERROR_MESSAGE
-from memory_error_functions import _get_document_names
-from memory_error_functions import check_if_page_is_excluded
-from memory_error_functions import get_memory_error
-from retrieval_assistant import RetrievalAssistant
-from retrieval_assistant import get_API_key
 from viktor import UserError
 from viktor import UserMessage
 from viktor import ViktorController
 from viktor import progress_message
 from viktor.core import File
 from viktor.core import Storage
-from viktor.parametrization import BooleanField, Tab
+from viktor.parametrization import BooleanField
 from viktor.parametrization import IsTrue
 from viktor.parametrization import Lookup
 from viktor.parametrization import MultiFileField
@@ -30,6 +17,7 @@ from viktor.parametrization import NumberField
 from viktor.parametrization import OptionField
 from viktor.parametrization import OutputField
 from viktor.parametrization import SetParamsButton
+from viktor.parametrization import Tab
 from viktor.parametrization import Table
 from viktor.parametrization import Text
 from viktor.parametrization import TextAreaField
@@ -37,6 +25,18 @@ from viktor.parametrization import ViktorParametrization
 from viktor.result import SetParamsResult
 from viktor.views import WebResult
 from viktor.views import WebView
+
+from config import EMBEDDINGS_MODEL
+from helper_functions import VIKTOR_file_to_df
+from helper_functions import df_to_VIKTOR_csv_file
+from helper_functions import generate_html_code
+from helper_functions import list_to_html_string
+from memory_error_functions import NO_MEMORY_ERROR_MESSAGE
+from memory_error_functions import _get_document_names
+from memory_error_functions import check_if_page_is_excluded
+from memory_error_functions import get_memory_error
+from retrieval_assistant import RetrievalAssistant
+from retrieval_assistant import get_API_key
 
 
 class Parametrization(ViktorParametrization):
@@ -63,7 +63,10 @@ class Parametrization(ViktorParametrization):
         "A known issue within the app is that some PDF pages can cause the app to run out of "
         "memory. This happens for example when technical drawings are included in the PDF. If "
         "a memory error occured, below is shown at what page and in which document. Please exclude this "
-        "page by entering the document name and page number in the table below.",
+        "page by entering the document name and page number in the table below.  \n"
+        "If this doesn't work, try uploading less PDF files. An issue is known that the app doesn't work when too many "
+        "files are uploaded. The app has been tested to work for around 10-15 pdf files, containing around "
+        "800-1000 pages.",
         visible=IsTrue(Lookup("input.out_of_memory_toggle")),
     )
     input.memory_error_output = OutputField(
@@ -107,11 +110,11 @@ The data is also not used to train the model or for other purposes, nor by OpenA
  
         """
     )
-    privacy_info.toggle = BooleanField("refresh toggle")
 
 
 class Controller(ViktorController):
     """Controller class for Document searcher app"""
+
     label = "Documents"
     parametrization = Parametrization
 
@@ -129,40 +132,43 @@ class Controller(ViktorController):
         documents = []
         pdf_information = {}
         for pdf_file in params.input.pdf_uploaded:
-            with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
-                pdf_information[pdf_file.filename] = {"n_pages": len(pdf.pages), "pdf_file": pdf_file}
+            with pdf_file.file.open_binary() as pdf_opened:
+                with pdfplumber.open(pdf_opened) as pdf:
+                    UserMessage.info(f"Pre-processing {pdf_file.filename}")
+                    pdf_information[pdf_file.filename] = {"n_pages": len(pdf.pages), "pdf_file": pdf_file}
 
         for pdf_filename in pdf_information:
             pages_range = pdf_information[pdf_filename]["n_pages"]
             for page_number in range(pages_range):
                 pdf_file = pdf_information[pdf_filename]["pdf_file"]
-                with pdfplumber.open(io.BytesIO(pdf_file.file.getvalue_binary())) as pdf:
-                    if check_if_page_is_excluded(
+                with pdf_file.file.open_binary() as pdf_opened:
+                    with pdfplumber.open(pdf_opened) as pdf:
+                        if check_if_page_is_excluded(
                             page_number, pdf_file.filename, params.input.exclude_pages_table,
-                            params.input.out_of_memory_toggle
-                    ):
-                        continue
-                    page = pdf.pages[page_number]
-                    progress_message(f"Setting up vector dataframe for...")
-                    UserMessage.info(f"Reading page {page_number + 1}/{pages_range} from {pdf_file.filename}")
-                    current_file_and_page = File.from_data(
-                        f"Page number: {page_number + 1} - Filename: {pdf_file.filename}"
-                    )
-                    Storage().set("current_document_and_page", current_file_and_page, scope="entity")
-                    page_text_split = splitter.split_text(page.extract_text())
-                    for split_text in page_text_split:
-                        documents.append(
-                            Document(
-                                page_content=split_text,
-                                metadata={
-                                    "source": pdf_file.filename,
-                                    "page_number": page_number + 1,
-                                    "n_pages": pdf_information[pdf_filename]["n_pages"],
-                                },
-                            )
+                                params.input.out_of_memory_toggle
+                        ):
+                            continue
+                        page = pdf.pages[page_number]
+                        progress_message(f"Setting up vector dataframe for...")
+                        UserMessage.info(f"Reading page {page_number + 1}/{pages_range} from {pdf_file.filename}")
+                        current_file_and_page = File.from_data(
+                            f"Page number: {page_number + 1} - Filename: {pdf_file.filename}"
                         )
-                    page.flush_cache()
-                    Storage().set("current_document_and_page", File.from_data(NO_MEMORY_ERROR_MESSAGE), scope="entity")
+                        Storage().set("current_document_and_page", current_file_and_page, scope="entity")
+                        page_text_split = splitter.split_text(page.extract_text())
+                        for split_text in page_text_split:
+                            documents.append(
+                                Document(
+                                    page_content=split_text,
+                                    metadata={
+                                        "source": pdf_file.filename,
+                                        "page_number": page_number + 1,
+                                        "n_pages": pdf_information[pdf_filename]["n_pages"],
+                                    },
+                                )
+                            )
+                        Storage().set("current_document_and_page", File.from_data(NO_MEMORY_ERROR_MESSAGE), scope="entity")
+                        page.flush_cache()
 
                     # Embed chunks
         API_KEY, ENDPOINT = get_API_key()
