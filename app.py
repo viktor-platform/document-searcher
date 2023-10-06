@@ -79,35 +79,29 @@ class Parametrization(ViktorParametrization):
 
     privacy_info = Tab("\U0001f4da Privacy & Usage info")
     privacy_info.disclaimer_text = Text(
-        """## Usage
+        """## Why we offer this app
+As a user of the VIKTOR platform we want you to see the power of it. The document searcher can be used by many people 
+within your organisation and is a fun way to get introduced to VIKTOR. 
+        
+## Usage
 
-This application uses a Large Language Model to make it possible to ask questions about an uploaded PDF. 
-Note that the Large Language Model (LLM) can only process text-based information can not read images. That means that 
-the PDF needs to be fully text-based, a picture of a document will not work.  
-
-Once a suitable document is uploaded, all the text from the PDF is embedded (a sort of index). Then, questions can be 
-asked regarding the document(s) and are answered based on those document(s). Additionally, also the source of the answer 
-is provided, by name of the document and page number. This tool is especially useful when there are lots of documents, 
-for example in the tender phase of a project.
-
-This app includes save-functionality. Once a document is uploaded by a user and the session is saved with the button in
-the top-right corner of the screen, this project (and thus the documents therein) is visible to all users who have 
-access to this application. 
+This app uses a tool called the Large Language Model (LLM) to help you ask questions about PDFs you upload. But remember, 
+the LLM can only read text. It can't understand pictures. So,  a picture of a document will not work. After you upload 
+a text-based PDF, you can ask questions about it. The app will answer based on what's in the PDF. It'll also tell you 
+where the answer came from, like the document name and page number. This is especially convenient when you're handling
+many documents, like in the planning phase of a project. You can also save your work in the app. Once you upload a PDF 
+and hit the save button (top-right corner), your team can see it if they use the app too. 
 
 ## Privacy
 
-The admins of your VIKTOR environment are in ful control of who gets access to the app; just like any other app. No one 
-can see the documents uploaded in the app. Only people with access to your app and only if one saves the documents in 
-the app.  
+The admins of your VIKTOR environment are in full control of who can use the app. No one else can see the documents 
+uploaded in the app unless they have permission. And even then, only if you save the documents in the app.  
 
-The LLM model is hosted on by VIKTOR on AzureAI and we use our own tokens. This means VIKTOR pays all the costs 
-for this enterprise service.  
-
-Even though we host the model, no VIKTOR employees have access to your data through that hosting service. Access to the
-documents uploaded can only be achieved by being added to the application in your environment by your admins.  
+The LLM model is hosted by VIKTOR on AzureAI. Even though we host the model, no VIKTOR employees have access to your 
+data through that hosting service. Access to the documents uploaded can only be achieved by being added to the 
+application in your environment by your admins.  
 
 The data is also not used to train the model or for other purposes, nor by OpenAI, Microsoft or VIKTOR.
- 
         """
     )
 
