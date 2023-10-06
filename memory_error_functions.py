@@ -18,7 +18,7 @@ def get_memory_error(**kwargs):
 def _get_document_names(params: Munch, **kwargs):
     """Returns the names of all uploaded documents"""
     pdf_file_names = []
-    for pdf_file in params.pdf_uploaded:
+    for pdf_file in params.input.pdf_uploaded:
         pdf_file_names.append(pdf_file.filename)
     return pdf_file_names
 
