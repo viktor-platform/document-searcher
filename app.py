@@ -17,6 +17,7 @@ from viktor.parametrization import NumberField
 from viktor.parametrization import OptionField
 from viktor.parametrization import OutputField
 from viktor.parametrization import SetParamsButton
+from viktor.parametrization import Tab
 from viktor.parametrization import Table
 from viktor.parametrization import Text
 from viktor.parametrization import TextAreaField
@@ -40,27 +41,25 @@ from retrieval_assistant import get_API_key
 
 class Parametrization(ViktorParametrization):
     """Parametrization class for document searcher"""
-
-    welcome_text = Text(
+    input = Tab("Input")
+    input.welcome_text = Text(
         "# \U0001F50D Document searcher  \n"
         "Welcome to the VIKTOR document searcher. "
         "With this app, you can easily find information in your PDF documents. Your question will be answered using "
         "the power of AzureAI."
     )
-    pdf_uploaded = MultiFileField("**Step 1:** Upload documents [PDF]", flex=100, file_types=[".pdf"])
-    text_step_2 = Text("**Step 2**: Submit your documents by clicking on the button below")
-    set_embeddings_button = SetParamsButton("\u2705 Submit documents", "set_embeddings", flex=45, longpoll=True)
-    question = TextAreaField(
+    input.pdf_uploaded = MultiFileField("**Step 1:** Upload documents [PDF]", flex=100, file_types=[".pdf"])
+    input.text_step_2 = Text("**Step 2**: Submit your documents by clicking on the button below")
+    input.set_embeddings_button = SetParamsButton("\u2705 Submit documents", "set_embeddings", flex=45, longpoll=True)
+    input.question = TextAreaField(
         "**Step 3:** Ask your question here",
         flex=100,
     )
-    step_4_text = Text("**Step 4:** Get your result by clicking 'Update' in the lower-right corner of this app.")
-    disclaimer_text = Text(
-        "**Privacy:** All your data will remain strictly confidential, and it will " "not be used to train any model."
-    )
-    embeddings_are_set = BooleanField("embeddings_are_set", default=False, visible=False)
-    out_of_memory_toggle = BooleanField("**Troubleshoot:** Out of memory? Click here to continue", flex=100)
-    out_of_memory_text = Text(
+    input.step_4_text = Text("**Step 4:** Get your result by clicking 'Update' in the lower-right corner of this app.")
+
+    input.embeddings_are_set = BooleanField("embeddings_are_set", default=False, visible=False)
+    input.out_of_memory_toggle = BooleanField("**Troubleshoot:** Out of memory? Click here to continue", flex=100)
+    input.out_of_memory_text = Text(
         "A known issue within the app is that some PDF pages can cause the app to run out of "
         "memory. This happens for example when technical drawings are included in the PDF. If "
         "a memory error occured, below is shown at what page and in which document. Please exclude this "
@@ -68,14 +67,43 @@ class Parametrization(ViktorParametrization):
         "If this doesn't work, try uploading less PDF files. An issue is known that the app doesn't work when too many "
         "files are uploaded. The app has been tested to work for around 10-15 pdf files, containing around "
         "800-1000 pages.",
-        visible=IsTrue(Lookup("out_of_memory_toggle")),
+        visible=IsTrue(Lookup("input.out_of_memory_toggle")),
     )
-    memory_error_output = OutputField(
-        "Memory error at:", value=get_memory_error, visible=IsTrue(Lookup("out_of_memory_toggle")), flex=100
+    input.memory_error_output = OutputField(
+        "Memory error at:", value=get_memory_error, visible=IsTrue(Lookup("input.out_of_memory_toggle")), flex=100
     )
-    exclude_pages_table = Table("Exclude pages from document", visible=IsTrue(Lookup("out_of_memory_toggle")))
-    exclude_pages_table.document_name = OptionField("Document name", options=_get_document_names)
-    exclude_pages_table.page_number = NumberField("Page number")
+    input.exclude_pages_table = Table("Exclude pages from document",
+                                      visible=IsTrue(Lookup("input.out_of_memory_toggle")))
+    input.exclude_pages_table.document_name = OptionField("Document name", options=_get_document_names)
+    input.exclude_pages_table.page_number = NumberField("Page number")
+
+    privacy_info = Tab("\U0001f4da Privacy & Usage info")
+    privacy_info.disclaimer_text = Text(
+        """## Why we offer this app
+As a user of the VIKTOR platform we want you to see the power of it. The document searcher can be used by many people 
+within your organisation and is a fun way to get introduced to VIKTOR. 
+        
+## Usage
+
+This app uses a tool called the Large Language Model (LLM) to help you ask questions about PDFs you upload. But remember, 
+the LLM can only read text. It can't understand pictures. So,  a picture of a document will not work. After you upload 
+a text-based PDF, you can ask questions about it. The app will answer based on what's in the PDF. It'll also tell you 
+where the answer came from, like the document name and page number. This is especially convenient when you're handling
+many documents, like in the planning phase of a project. You can also save your work in the app. Once you upload a PDF 
+and hit the save button (top-right corner), your team can see it if they use the app too. 
+
+## Privacy
+
+The admins of your VIKTOR environment are in full control of who can use the app. No one else can see the documents 
+uploaded in the app unless they have permission. And even then, only if you save the documents in the app.  
+
+The LLM model is hosted by VIKTOR on AzureAI. Even though we host the model, no VIKTOR employees have access to your 
+data through that hosting service. Access to the documents uploaded can only be achieved by being added to the 
+application in your environment by your admins.  
+
+The data is also not used to train the model or for other purposes, nor by OpenAI, Microsoft or VIKTOR.
+        """
+    )
 
 
 class Controller(ViktorController):
@@ -88,7 +116,7 @@ class Controller(ViktorController):
         """Takes in one or multiple PDF documents and returns a single chunked, embedded file. The metadata for page
         number and document name is included in the embedded file. The embedded file is saved to storage.
         """
-        if not params.pdf_uploaded:
+        if not params.input.pdf_uploaded:
             raise UserError("Please upload a PDF file first.")
 
         # Splitter is used to chunk the document, so the chunk size doesn't become too big for ChatGPT
@@ -97,7 +125,7 @@ class Controller(ViktorController):
         # Read and chunk PDF
         documents = []
         pdf_information = {}
-        for pdf_file in params.pdf_uploaded:
+        for pdf_file in params.input.pdf_uploaded:
             with pdf_file.file.open_binary() as pdf_opened:
                 with pdfplumber.open(pdf_opened) as pdf:
                     UserMessage.info(f"Pre-processing {pdf_file.filename}")
@@ -110,7 +138,8 @@ class Controller(ViktorController):
                 with pdf_file.file.open_binary() as pdf_opened:
                     with pdfplumber.open(pdf_opened) as pdf:
                         if check_if_page_is_excluded(
-                            page_number, pdf_file.filename, params.exclude_pages_table, params.out_of_memory_toggle
+                            page_number, pdf_file.filename, params.input.exclude_pages_table,
+                                params.input.out_of_memory_toggle
                         ):
                             continue
                         page = pdf.pages[page_number]
@@ -167,29 +196,29 @@ class Controller(ViktorController):
         pdf_names_str = list_to_html_string(pdf_information.keys())
         Storage().set("embeddings_storage", csv_file, scope="entity")
         Storage().set("list_of_files", File.from_data(pdf_names_str), scope="entity")
-        return SetParamsResult({"embeddings_are_set": True})
+        return SetParamsResult({"input": {"embeddings_are_set": True}})
 
     @WebView("Conversation", duration_guess=5)
     def conversation(self, params, **kwargs):
         """View for showing the questions, answers and sources to the user."""
-        if not params.pdf_uploaded:
+        if not params.input.pdf_uploaded:
             raise UserError("Please upload a PDF file first.")
-        elif not params.embeddings_are_set:
+        elif not params.input.embeddings_are_set:
             raise UserError("Please embed the uploaded PDF file first, by clicking 'Submit document(s)'.")
         else:
             embeddings_file = Storage().get("embeddings_storage", scope="entity")
             df = VIKTOR_file_to_df(embeddings_file)
-            retrieval_assistant = RetrievalAssistant(params.question, df)
+            retrieval_assistant = RetrievalAssistant(params.input.question, df)
             answer = retrieval_assistant.ask_assistant()
             html = generate_html_code(
-                params.question, answer, retrieval_assistant.metadata_list, retrieval_assistant.context_list
+                params.input.question, answer, retrieval_assistant.metadata_list, retrieval_assistant.context_list
             )
         return WebResult(html=html)
 
     @WebView("Document list", duration_guess=1)
     def document_list_view(self, params, **kwargs):
         """View for showing which documents are currently embedded in storage and used to answer the questions."""
-        if not params.embeddings_are_set:
+        if not params.input.embeddings_are_set:
             pdf_names_str = "No documents have been uploaded or submitted yet."
         else:
             pdf_names_str = Storage().get("list_of_files", scope="entity").getvalue()
