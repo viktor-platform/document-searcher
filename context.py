@@ -90,7 +90,7 @@ def get_response_message(completion):
 
 
 def get_chat_completion_gpt(questions_and_answers):
-    """Posts thre request to AzureAI and catch exceptions"""
+    """Posts the request to AzureAI and catch exceptions"""
     for idx in range(RETRIES):
         try:
             completion = openai.ChatCompletion.create(
