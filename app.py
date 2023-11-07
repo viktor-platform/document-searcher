@@ -1,8 +1,11 @@
+import random
 import pandas as pd
 import pdfplumber
+
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from openai.error import RateLimitError
 from viktor import UserError
 from viktor import UserMessage
 from viktor import ViktorController
@@ -27,6 +30,8 @@ from viktor.views import WebResult
 from viktor.views import WebView
 
 from config import EMBEDDINGS_MODEL
+from config import RETRIES
+from config import RETRY_MESSAGE
 from helper_functions import VIKTOR_file_to_df
 from helper_functions import df_to_VIKTOR_csv_file
 from helper_functions import generate_html_code
@@ -179,14 +184,23 @@ class Controller(ViktorController):
                 f"Embedding page {document.metadata['page_number']}/{document.metadata['n_pages']} for "
                 f"{document.metadata['source']}"
             )
-            embedded_documents.append(
-                {
-                    "text": document.page_content,
-                    "embeddings": embeddings.embed_query(document.page_content),
-                    "page_number": document.metadata["page_number"],
-                    "source": document.metadata["source"],
-                }
-            )
+            for idx in range(RETRIES):
+                try:
+                    embedded_documents.append(
+                        {
+                            "text": document.page_content,
+                            "embeddings": embeddings.embed_query(document.page_content),
+                            "page_number": document.metadata["page_number"],
+                            "source": document.metadata["source"],
+                        }
+                    )
+                    break
+                except RateLimitError:
+                    if idx < RETRIES - 1:
+                        progress_message(random.choice(RETRY_MESSAGE))
+                        continue
+                    raise UserError(
+                        "RateLimitError: The ChatGPT model is currently overloaded. Please retry your request.")
 
         # Save embeddings to storage
         UserMessage.success("Finishing up...")
