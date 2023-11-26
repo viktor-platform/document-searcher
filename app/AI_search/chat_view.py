@@ -1,21 +1,4 @@
-import io
-
 import markdown
-import pandas as pd
-from viktor import File
-
-
-def df_to_VIKTOR_csv_file(df: pd.DataFrame) -> File:
-    """Converts a pandas DataFrame to a VIKTOR csv file."""
-    bytes_buffer = io.BytesIO()
-    df.to_csv(bytes_buffer)
-    return File.from_data(bytes_buffer.getvalue())
-
-
-def VIKTOR_file_to_df(file_name: File) -> pd.DataFrame:
-    """Converts a csv VIKTOR file to a pandas dataframe"""
-    file_content = file_name.getvalue("utf-8")
-    return pd.read_csv(io.StringIO(file_content))
 
 
 def list_to_html_string(input_list: list[str]):

@@ -1,7 +1,7 @@
-viktor==14.4.0
-langchain~=0.0.312
-openai==0.27.8
-pdfplumber==0.10.2
+viktor==14.6.1
+langchain~=0.0.340
+openai==1.3.5
 tiktoken==0.4.0
 scipy==1.10.0
 Markdown==3.4.4
+pypdf==3.17.1
