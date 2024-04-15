@@ -21,15 +21,17 @@ from app.AI_search.config import EMBEDDINGS_MODEL
 from app.AI_search.config import TEMPERATURE
 
 
-def get_API_key() -> tuple[str, str]:
+def get_API_key() -> tuple[str, str, str]:
     """Get API key and endpoint from app secret"""
     try:
         API_KEY = os.environ["API_KEY"]
         ENDPOINT = os.environ["ENDPOINT"]
+        API_VERSION = os.environ["API_VERSION"]
     except KeyError:
         from API_KEY import API_KEY  # pylint: disable=import-outside-toplevel
         from API_KEY import ENDPOINT  # pylint: disable=import-outside-toplevel
-    return API_KEY, ENDPOINT
+        from API_KEY import API_VERSION  # pylint: disable=import-outside-toplevel
+    return API_KEY, ENDPOINT, API_VERSION
 
 
 def get_chat_completion_gpt(client: OpenAI, questions_and_answers):

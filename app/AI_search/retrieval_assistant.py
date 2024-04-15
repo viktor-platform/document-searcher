@@ -37,14 +37,10 @@ class RetrievalAssistant:
         self.context_list = []
         self.current_question = {}
         self.df = df
-        API_KEY, ENDPOINT = get_API_key()
+        API_KEY, ENDPOINT, API_VERSION = get_API_key()
         self.client = AzureOpenAI(
-            api_key=API_KEY, api_version="2023-10-01-preview", azure_endpoint=ENDPOINT, max_retries=MAX_RETRIES
+            api_key=API_KEY, api_version=API_VERSION, azure_endpoint=ENDPOINT, max_retries=MAX_RETRIES
         )
-        openai.api_key = API_KEY
-        openai.api_base = ENDPOINT
-        openai.api_type = "azure"
-        openai.api_version = "2023-05-15"
 
         self._set_current_question(self.question)
         self._create_context()

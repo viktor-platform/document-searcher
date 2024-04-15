@@ -41,9 +41,9 @@ For this application two models are required:
 - Completion model. For example: gpt-3.5-turbo or gpt-4-turbo
 - Embeddings model. For example: ada-2
 
-Make sure the names of the models in your AzureAI environment resemble the names in the config.py file.
+Make sure the names of the models in your AzureAI environment resemble the names in the config.py file, referred to as COMPLETIONS_MODEL and EMBEDDINGS_MODEL.
 
-Once the app is published, you can set the ENDPOINT and API_KEY as environment variable. Please refer to our [documentation](https://docs.viktor.ai/docs/create-apps/development-tools-and-tips/environment-variables/) 
+Once the app is created, **three environment variables** need to be set: ENDPOINT, API_KEY and API_VERSION. Please refer to our [documentation](https://docs.viktor.ai/docs/create-apps/development-tools-and-tips/environment-variables/) 
 for how to set up the environment variables in the app.
 
 # Questions

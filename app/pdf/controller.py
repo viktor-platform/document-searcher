@@ -58,9 +58,9 @@ class Controller(ViktorController):
 
         # Embed chunks
         embedded_documents = []
-        API_KEY, ENDPOINT = get_API_key()
+        API_KEY, ENDPOINT, API_VERSION = get_API_key()
         client = AzureOpenAI(
-            api_key=API_KEY, api_version="2023-10-01-preview", azure_endpoint=ENDPOINT, max_retries=MAX_RETRIES
+            api_key=API_KEY, api_version=API_VERSION, azure_endpoint=ENDPOINT, max_retries=MAX_RETRIES
         )
 
         for document in documents:
